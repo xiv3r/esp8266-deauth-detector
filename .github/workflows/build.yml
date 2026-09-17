@@ -1,0 +1,54 @@
+name: Build ESP8266 Detector Firmware
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+      
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Install Arduino-cli
+      run: |
+        # Arduino-Cli Debian package
+        wget -O arduino-cli.deb https://github.com/arduino/arduino-cli/releases/download/v1.5.1/arduino-cli_1.5.1-1_amd64.deb
+        sudo dpkg -i arduino-cli.deb
+        sudo apt --fix-broken install -y
+        sudo dpkg --configure -a
+
+        # Arduino-Cli library
+        arduino-cli config init
+        arduino-cli config add board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+        arduino-cli core update-index
+        arduino-cli core install esp8266:esp8266
+
+        # Compile firmware
+        mv *.ino esp8266-deauth-detector.ino
+        arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --clean --output-dir firmware .
+
+        # Rename Firmware
+        mv firmware/*.ino.bin firmware/esp8266-detector-firmware-0x0.bin
+         
+    - name: Determine release tag
+      id: get_tag
+      run: |
+        if [ "${{ github.event_name }}" == "release" ]; then
+          TAG_NAME="${{ github.event.release.tag_name }}"
+        else
+          TAG_NAME="esp8266"
+        fi
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+    - name: Upload files to existing release
+      uses: softprops/action-gh-release@v3
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
+        files: |
+          firmware/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
