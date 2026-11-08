@@ -5,7 +5,6 @@ extern "C" {
 }
 #define LED 2
 #define LED_INVERT true
-#define SERIAL_BAUD 115200
 #define CH_TIME 140
 #define PKT_RATE 5
 #define PKT_TIME 1
@@ -30,7 +29,6 @@ void attack_stopped() {
   digitalWrite(LED, LED_INVERT);
 }
 void setup() {
-  Serial.begin(SERIAL_BAUD);
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LED_INVERT);
   WiFi.disconnect();
